@@ -3,6 +3,7 @@
 #include "readData.h"
 #include <string>
 #include "tools.h"
+#include "mpi.h"
 
 using namespace std;
 using namespace dataRead;
@@ -34,8 +35,11 @@ void viewSets(int *sets, int nObs, int iterN)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // mpi variables
+    int size, rank; // the number of processes and process id
+
     // control variables
     double start, finish, total = 0; // timing values
     bool convergence = false;        // state of set convergence
@@ -47,6 +51,10 @@ int main()
     string fileName = "test_data_5D_" + to_string(OBSERVATIONS) + ".csv"; // data file name
     int *sets;                                                            // the observations in each set
     int *prevSets;                                                        // the set from the previous iteration - F
+
+    // initialize mpi
+    MPI_Init(&argc, &argv);
+
 
     x = new float *[OBSERVATIONS]; // initialize memory on the host
     labels = new int[OBSERVATIONS];
