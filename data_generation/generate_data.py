@@ -13,11 +13,12 @@ from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
 
 
-MAX_SAMPLES = 10 # will need to change 100,000
+MAX_SAMPLES = 1000000 # will need to change 100,000
 FEATURES = 5 # will need to change to 5
 N_CLUSTERS = 2 # will change to 3
 
-X1, Y1 = make_blobs(n_samples=MAX_SAMPLES, n_features=FEATURES, random_state=12345678)
+centers = [[1, 1, 1, 1, 1], [1, -1, 1, -1, 1], [-1, 1, -1, 1, -1]]
+X1, Y1 = make_blobs(n_samples=MAX_SAMPLES, n_features=FEATURES, centers=centers, cluster_std=0.6, random_state=12345678)
 
 plt.subplot(211)
 plt.scatter(X1[Y1==0, 0], X1[Y1==0, 1], marker='o', color='blue')
