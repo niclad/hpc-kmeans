@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "*.cu": "cpp",
-        ".cuh": "cpp",
-        "string": "cpp",
-        "iostream": "cpp"
-    }
-}
