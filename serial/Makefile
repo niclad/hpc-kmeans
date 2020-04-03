@@ -21,4 +21,4 @@ $(TEST_TARGET).o: $(TEST_TARGET).cpp
 
 
 clean:
-	rm $(objects)
+	rm $(objects) *.out

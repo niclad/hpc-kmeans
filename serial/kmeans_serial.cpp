@@ -40,7 +40,7 @@ int main()
     double start, finish, total = 0; // timing values
     bool convergence = false;        // state of set convergence
     int currIter = 0;                // the current iteration for update loop
-    double timingStats[5];
+    double timingStats[6];
 
     // data variables
     float *mu;                                                            // set means
@@ -115,6 +115,7 @@ int main()
 
     cout << "Convergence time: " << finish << " msec. in " << currIter << " iterations." << endl;
     timingStats[2] = finish;
+    timingStats[3] = currIter;
 
     // ===== SAVE FINAL LABELS =====
     start = CLOCK();
@@ -122,9 +123,9 @@ int main()
     finish = CLOCK() - start;
     total += finish;
     cout << "File save time: " << finish << " msec." << endl;
-    timingStats[3] = finish;
+    timingStats[4] = finish;
     cout << "Total operation time: " << total << " msec." << endl;
-    timingStats[4] = total;
+    timingStats[5] = total;
 
     // save running statistics
     string statsName = "running_stats-" + to_string(OBSERVATIONS) + ".csv";

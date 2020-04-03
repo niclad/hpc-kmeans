@@ -108,16 +108,16 @@ void dataRead::saveData(const string saveName, int *sets, int nObs)
     outputData.close();
 }
 
-void dataRead::saveStats(double timeStats[5], string fileName)
+void dataRead::saveStats(double timeStats[6], string fileName)
 {
     typedef numeric_limits<double> dbl;
 
     ofstream timeFile(fileName, ofstream::out | ofstream::app);
 
     timeFile.precision(dbl::max_digits10);
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 5; i++)
         timeFile << timeStats[i] << ",";
-    timeFile << timeStats[4] << "\n";
+    timeFile << timeStats[5] << "\n";
 
     timeFile.close();
 }
