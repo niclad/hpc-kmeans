@@ -1,7 +1,7 @@
-TEST_TARGET = kmeans_test
-CC = g++
+TEST_TARGET = kmeans_mpi
+CC = mpic++
 CVER = -std=c++11
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -O1
 objects = $(TEST_TARGET).o readData.o tools.o kmeans.o
 
 test: $(objects)
@@ -21,4 +21,4 @@ $(TEST_TARGET).o: $(TEST_TARGET).cpp
 
 
 clean:
-	rm $(objects)
+	rm $(objects) *.out

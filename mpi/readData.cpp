@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include "readData.h"
 #include <sstream>
 #include <sys/stat.h>
@@ -105,4 +106,18 @@ void dataRead::saveData(const string saveName, int *sets, int nObs)
 
     cout << "Labels saved as \"" << saveName << "\"" << endl;
     outputData.close();
+}
+
+void dataRead::saveStats(double timeStats[6], string fileName)
+{
+    typedef numeric_limits<double> dbl;
+
+    ofstream timeFile(fileName, ofstream::out | ofstream::app);
+
+    timeFile.precision(dbl::max_digits10);
+    for (int i = 0; i < 5; i++)
+        timeFile << timeStats[i] << ",";
+    timeFile << timeStats[5] << "\n";
+
+    timeFile.close();
 }

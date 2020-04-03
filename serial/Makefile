@@ -1,7 +1,7 @@
 TEST_TARGET = kmeans_serial
 CC = g++
 CVER = -std=c++11
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -O1
 objects = $(TEST_TARGET).o readData.o tools.o kmeans.o
 
 test: $(objects)
