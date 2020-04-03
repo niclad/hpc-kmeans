@@ -40,6 +40,7 @@ int main()
     double start, finish, total = 0; // timing values
     bool convergence = false;        // state of set convergence
     int currIter = 0;                // the current iteration for update loop
+    double timingStats[5];
 
     // data variables
     float *mu;                                                            // set means
@@ -70,7 +71,7 @@ int main()
     finish = CLOCK() - start;
     total += finish;
     cout << "File read time: " << finish << " msec." << endl;
-
+    timingStats[0] = finish;
     //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
 
     // ===== INITIALIZE K-MEANS =====
@@ -87,6 +88,7 @@ int main()
     finish = CLOCK() - start;
     total += finish;
     cout << "K-means init. time: " << finish << " msec." << endl;
+    timingStats[1] = finish;
 
     // ===== OPERATE ON SETS =====
     start = CLOCK();
@@ -112,6 +114,7 @@ int main()
         cout << "Maximum iterations reached. Convergence status unknown." << endl;
 
     cout << "Convergence time: " << finish << " msec. in " << currIter << " iterations." << endl;
+    timingStats[2] = finish;
 
     // ===== SAVE FINAL LABELS =====
     start = CLOCK();
@@ -119,8 +122,13 @@ int main()
     finish = CLOCK() - start;
     total += finish;
     cout << "File save time: " << finish << " msec." << endl;
-
+    timingStats[3] = finish;
     cout << "Total operation time: " << total << " msec." << endl;
+    timingStats[4] = total;
+
+    // save running statistics
+    string statsName = "running_stats-" + to_string(OBSERVATIONS) + ".csv";
+    saveStats(timingStats, statsName);
 
     for (int i = 0; i < 10; i++) // free host memory
         delete[] x[i];
