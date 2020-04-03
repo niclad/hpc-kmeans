@@ -81,7 +81,7 @@ void kmeans::updateSets(int *sets, int nSets, float **x, float *mu, const int nO
             if ((k + 1) % nFeatures == 0)
                 idx ++; // update dists index based on current cluster
         }
-        //for (int m = 0; m < nSets; m++) cout << dists[m] << " "; cout << endl; // DEBUGGING
+        // for (int m = 0; m < nSets; m++) cout << dists[m] << " "; cout << endl; // DEBUGGING
         sets[i] = minIdx(dists, nSets);
     }
 

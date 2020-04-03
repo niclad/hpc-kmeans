@@ -9,11 +9,11 @@ using namespace dataRead;
 using namespace tools;
 using namespace kmeans;
 
-const int OBSERVATIONS = 100; // the number of data points in the file
-const int FEATURES = 5;       // the number of data features
-const int CLUSTERS = 3;       // the number of clusters in the data set (K)
-float **x;                    // data points
-const int MAX_ITER = 1000;    // maximum no. of iterations before giving up
+const int OBSERVATIONS = 1000; // the number of data points in the file
+const int FEATURES = 5;      // the number of data features
+const int CLUSTERS = 3;      // the number of clusters in the data set (K)
+float **x;                   // data points
+const int MAX_ITER = 1000;   // maximum no. of iterations before giving up
 
 void viewMeans(float *mu, int nFeatures, int nClusters, int iterN)
 {
@@ -71,7 +71,7 @@ int main()
     total += finish;
     cout << "File read time: " << finish << " msec." << endl;
 
-    printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file
+    //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
 
     // ===== INITIALIZE K-MEANS =====
     start = CLOCK();
@@ -80,6 +80,9 @@ int main()
 
     updateSets(sets, CLUSTERS, x, mu, OBSERVATIONS, FEATURES); // initialize sets by updating the assigned values
     // viewSets(sets, 10, -1);                                    // DEBUGGING
+
+    for (int aSet = 0; aSet < CLUSTERS; aSet++) // update the set means with a new set elements
+        setsMean(aSet, sets, x, mu, OBSERVATIONS, FEATURES);
 
     finish = CLOCK() - start;
     total += finish;
@@ -98,6 +101,7 @@ int main()
         // viewSets(sets, 10, currIter);      // DEBUGGING
 
         convergence = arrayCompare(OBSERVATIONS, prevSets, sets); // check the current and previous sets for convergence
+        //cout << "Convergence? " << boolalpha << convergence << endl; // DEBUGGING
         currIter++;
     }
     finish = CLOCK() - start;

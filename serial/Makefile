@@ -1,4 +1,4 @@
-TEST_TARGET = kmeans_test
+TEST_TARGET = kmeans_serial
 CC = g++
 CVER = -std=c++11
 CFLAGS = -Wall -g

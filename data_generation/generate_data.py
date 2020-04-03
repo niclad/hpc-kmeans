@@ -13,7 +13,7 @@ from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
 
 
-MAX_SAMPLES = 10000 # will need to change 100,000
+MAX_SAMPLES = 10 # will need to change 100,000
 FEATURES = 5 # will need to change to 5
 N_CLUSTERS = 2 # will change to 3
 
