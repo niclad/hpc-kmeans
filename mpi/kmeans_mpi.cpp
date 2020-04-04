@@ -1,5 +1,6 @@
 #include <iostream>
 #include "kmeans.h"
+#include "mpi.h"
 #include "readData.h"
 #include <string>
 #include "tools.h"
@@ -9,11 +10,13 @@ using namespace dataRead;
 using namespace tools;
 using namespace kmeans;
 
-const int OBSERVATIONS = 10; // the number of data points in the file
-const int FEATURES = 5;      // the number of data features
-const int CLUSTERS = 3;      // the number of clusters in the data set (K)
-float **x;                   // data points
-const int MAX_ITER = 1000;   // maximum no. of iterations before giving up
+const int OBSERVATIONS = 100;     // the number of data points in the file
+const int FEATURES = 5;           // the number of data features
+const int CLUSTERS = 3;           // the number of clusters in the data set (K)
+float x[OBSERVATIONS][FEATURES];  // data points -- MUST BE CONTIGUOUS DATA
+float mu[FEATURES * CLUSTERS];    // means for the cluster sets
+const int MAX_ITER = 1000;        // maximum no. of iterations before giving up
+const int npp = OBSERVATIONS / 4; // numPerProc--should always 0.25 * OBSERVATIONS
 
 void viewMeans(float *mu, int nFeatures, int nClusters, int iterN)
 {
@@ -34,108 +37,173 @@ void viewSets(int *sets, int nObs, int iterN)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // mpi variables
+    int rank, size;   // the process id and number of processes
+    double maxFinish; // the maximum running time for the world
+
     // control variables
     double start, finish, total = 0; // timing values
-    bool convergence = false;        // state of set convergence
+    char convergence = 0;            // state of set convergence
     int currIter = 0;                // the current iteration for update loop
-    double timingStats[6];
+    double timingStats[6];           // would likely work better as a struct
+
+    string fileName = "test_data_5D_" + to_string(OBSERVATIONS) + ".csv"; // data file name
+    string statsName = "running_stats-" + to_string(OBSERVATIONS) + ".csv";
 
     // data variables
-    float *mu;                                                            // set means
-    int *labels;                                                          // gnd truth labels
-    string fileName = "test_data_5D_" + to_string(OBSERVATIONS) + ".csv"; // data file name
-    int *sets;                                                            // the observations in each set
-    int *prevSets;                                                        // the set from the previous iteration - F
+    int labels[OBSERVATIONS];        // gnd truth labels
+    int sets[OBSERVATIONS];          // the observations in each set
+    int prevSets[OBSERVATIONS];      // the set from the previous iteration - F
+    int counts[CLUSTERS];            // the counts for the elements in each set
+    float sums[FEATURES * CLUSTERS]; // the sums of all the elements in each set
 
-    x = new float *[OBSERVATIONS]; // initialize memory on the host
-    labels = new int[OBSERVATIONS];
-    sets = new int[OBSERVATIONS];
-    prevSets = new int[OBSERVATIONS];
-    mu = new float[FEATURES * CLUSTERS];
+    // ===== SIZE VARIABLES =====
 
-    // initialize x
-    for (int i = 0; i < OBSERVATIONS; i++)
-    {
-        x[i] = new float[FEATURES];
-    }
+    int procSets[npp];      // sets assigned to a proc
+    int procPrev[npp];      // prev sets assigned to a proc
+    float tempMu[FEATURES]; // temporary mu for procs updating mean
+    int tempCounts[CLUSTERS];
+    float tempSums[FEATURES * CLUSTERS];
 
-    //initialize mu
+    // initialize mu
     for (int i = 0; i < CLUSTERS * FEATURES; i++)
         mu[i] = 0;
 
-    // ===== READ DATA =====
-    start = CLOCK();
-    readData(fileName, x, labels, FEATURES); // read the data from the data file
-    finish = CLOCK() - start;
-    total += finish;
-    cout << "File read time: " << finish << " msec." << endl;
-    timingStats[0] = finish;
-    //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
+    // initialize mpi
+    MPI_Init(&argc, &argv); // start mpi
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    // ===== INITIALIZE K-MEANS =====
+    // initialize arrays that count
+    initArray<int>(CLUSTERS, counts);
+    initArray<int>(CLUSTERS, tempCounts);
+    initArray<float>(CLUSTERS * FEATURES, sums);
+    initArray<float>(CLUSTERS * FEATURES, tempSums);
+
+    // ===== READ DATA =====
+    MPI_Barrier(MPI_COMM_WORLD);
     start = CLOCK();
-    forgy(CLUSTERS, FEATURES, mu, x, OBSERVATIONS); // initialize means using Forgy method
+    if (rank == 0) // only let head proc. read data.
+    {
+        readData(fileName, x, labels, FEATURES); // read the data from the data file
+        //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
+    }
+    MPI_Bcast(x, OBSERVATIONS, MPI_FLOAT, 0, MPI_COMM_WORLD); // send observations to all processes
+    finish = CLOCK() - start;
+    MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
+
+    if (rank == 0)
+    {
+        total += maxFinish;
+        cout << "File read time: " << maxFinish << " msec." << endl;
+        timingStats[0] = maxFinish;
+    }
+    // ===== INITIALIZE K-MEANS =====
+    MPI_Barrier(MPI_COMM_WORLD);
+    start = CLOCK();
+    if (rank == 0)                                      // only let one process handle this
+        forgy(CLUSTERS, FEATURES, mu, x, OBSERVATIONS); // initialize means using Forgy method
     // viewMeans(mu, FEATURES, CLUSTERS, -1);          // DEBUGGING
 
-    updateSets(sets, CLUSTERS, x, mu, OBSERVATIONS, FEATURES); // initialize sets by updating the assigned values
+    MPI_Bcast(mu, CLUSTERS * FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // send the means to all the processes
+
+    updateSets(procSets, CLUSTERS, tempCounts, tempSums, x, mu, OBSERVATIONS, FEATURES, rank, npp); // initialize sets by updating the assigned values
     // viewSets(sets, 10, -1);                                    // DEBUGGING
 
-    for (int aSet = 0; aSet < CLUSTERS; aSet++) // update the set means with a new set elements
-        setsMean(aSet, sets, x, mu, OBSERVATIONS, FEATURES);
+    // make sure all processes have the updated sets and relevant information
+    MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);              // gather the set assignments
+    MPI_Reduce(tempCounts, counts, CLUSTERS, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);          // sum all counts
+    MPI_Reduce(tempSums, sums, FEATURES * CLUSTERS, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // sum all sums
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank < 3)
+        setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
+    MPI_Bcast(mu, FEATURES * CLUSTERS, MPI_FLOAT, 0, MPI_COMM_WORLD);                    // distribute the means
 
     finish = CLOCK() - start;
-    total += finish;
-    cout << "K-means init. time: " << finish << " msec." << endl;
-    timingStats[1] = finish;
+    MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
+
+    if (rank == 0)
+    {
+        total += maxFinish;
+        cout << "K-means init. time: " << maxFinish << " msec." << endl;
+        timingStats[1] = maxFinish;
+    }
 
     // ===== OPERATE ON SETS =====
+    MPI_Barrier(MPI_COMM_WORLD);
     start = CLOCK();
+    MPI_Scatter(sets, npp, MPI_INT, procSets, npp, MPI_INT, 0, MPI_COMM_WORLD);
+    currIter = 0;
     while (!convergence && (currIter < MAX_ITER))
     {
-        arrayCopy(OBSERVATIONS, prevSets, sets);                   // update prevSets, to keep last sets
-        updateSets(sets, CLUSTERS, x, mu, OBSERVATIONS, FEATURES); // update the sets with the new means
-        for (int aSet = 0; aSet < CLUSTERS; aSet++)                // update the set means with a new set elements
-            setsMean(aSet, sets, x, mu, OBSERVATIONS, FEATURES);
+        // reset proc based counts and sums
+        initArray<int>(CLUSTERS, tempCounts);
+        initArray<float>(CLUSTERS * FEATURES, tempSums);
 
-        // viewMeans(mu, FEATURES, CLUSTERS, currIter); // DEBUGGING
-        // viewSets(sets, 10, currIter);      // DEBUGGING
+        if (rank == 0) // have head node copy the set for later comparison
+            arrayCopy(OBSERVATIONS, prevSets, sets);
 
-        convergence = arrayCompare(OBSERVATIONS, prevSets, sets); // check the current and previous sets for convergence
-        //cout << "Convergence? " << boolalpha << convergence << endl; // DEBUGGING
+        updateSets(procSets, CLUSTERS, tempCounts, tempSums, x, mu, OBSERVATIONS, FEATURES, rank, npp);
+
+        MPI_Reduce(tempCounts, counts, CLUSTERS, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(tempSums, sums, CLUSTERS * FEATURES, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+        if (rank <= 3)
+            setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);           // update the sets
+        MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
+        MPI_Bcast(mu, FEATURES * CLUSTERS, MPI_FLOAT, 0, MPI_COMM_WORLD);                    // distribute the means
+
+        if (rank == 0)
+            convergence = arrayCompare(OBSERVATIONS, prevSets, sets); // check the current and previous sets for convergence
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&convergence, 1, MPI_CHAR, 0, MPI_COMM_WORLD);
         currIter++;
     }
+    MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);
+
     finish = CLOCK() - start;
-    total += finish;
+    MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
+    //MPI_Reduce(&currIter, &currIter, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);   // get the most number of iterations
 
-    // display convergence statistics
-    if (currIter >= MAX_ITER)
-        cout << "Maximum iterations reached. Convergence status unknown." << endl;
+    if (rank == 0)
+    {
+        total += maxFinish;
 
-    cout << "Convergence time: " << finish << " msec. in " << currIter << " iterations." << endl;
-    timingStats[2] = finish;
-    timingStats[3] = currIter;
+        // display convergence statistics
+        if (currIter >= MAX_ITER)
+            cout << "Maximum iterations reached. Convergence status unknown." << endl;
+
+        cout << "Convergence time: " << finish << " msec. in " << currIter << " iterations." << endl;
+        timingStats[2] = finish;
+        timingStats[3] = currIter;
+    }
 
     // ===== SAVE FINAL LABELS =====
-    start = CLOCK();
-    saveData("out_data.csv", sets, OBSERVATIONS); // save the updated labels
-    finish = CLOCK() - start;
-    total += finish;
-    cout << "File save time: " << finish << " msec." << endl;
-    timingStats[4] = finish;
-    cout << "Total operation time: " << total << " msec." << endl;
-    timingStats[5] = total;
+    if (rank == 0)
+    {
+        start = CLOCK();
+        saveData("out_data.csv", sets, OBSERVATIONS); // save the updated labels
+        finish = CLOCK() - start;
+        total += finish;
+        cout << "File save time: " << finish << " msec." << endl;
+        timingStats[4] = finish;
+        cout << "Total operation time: " << total << " msec." << endl;
+        timingStats[5] = total;
 
-    // save running statistics
-    string statsName = "running_stats-" + to_string(OBSERVATIONS) + ".csv";
-    saveStats(timingStats, statsName);
+        // save running statistics
+        saveStats(timingStats, statsName);
+        cout << "END" << endl;
+    }
 
-    for (int i = 0; i < 10; i++) // free host memory
-        delete[] x[i];
-    delete[] x;
-    delete[] labels;
-    delete[] sets;
-    delete[] prevSets;
-    delete[] mu;
+    MPI_Finalize();
 }

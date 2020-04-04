@@ -53,11 +53,11 @@ void tools::randomPartition(int nSets, int *sets, int nObs)
  * @param mu            The set means
  * @param nObs          The number of observations in the data
  */
-void tools::forgy(int nSets, int nFeatures, float *mu, float **x, int nObs)
+void tools::forgy(int nSets, int nFeatures, float *mu, float x[][5], int nObs)
 {
     int val = 0;
-    int *obsChoice = new int[nSets]; // the observations to choose from 
-    for (int i = 0; i < nSets; i++) // initialize the array
+    int *obsChoice = new int[nSets]; // the observations to choose from
+    for (int i = 0; i < nSets; i++)  // initialize the array
         obsChoice[i] = -1;
 
     random_device seed;
@@ -83,7 +83,7 @@ void tools::forgy(int nSets, int nFeatures, float *mu, float **x, int nObs)
         for (int j = 0; j < nFeatures; j++)
         {
             int offset = nFeatures * i; // calculate the sets mu index offset
-            int rowIdx = obsChoice[i]; // get the row index from choices
+            int rowIdx = obsChoice[i];  // get the row index from choices
             mu[j + offset] = x[rowIdx][j];
         }
     }
@@ -106,7 +106,7 @@ bool tools::inArray(int *arr, int item, int n)
 
     for (int i = 0; i < n; i++)
     {
-        inArr = arr[i] == item; 
+        inArr = arr[i] == item;
         if (inArr) // the arraty is in the list, end the check
             break;
     }
@@ -122,9 +122,9 @@ bool tools::inArray(int *arr, int item, int n)
  * @param prevSets      The previous set assignments
  * @param sets          The current set assignments
  */
-bool tools::arrayCompare(const int nObs, int *prevSets, int *sets)
+char tools::arrayCompare(const int nObs, int *prevSets, int *sets)
 {
-    bool equal = false; // assume the arrays aren't equal, at first
+    char equal = 0; // assume the arrays aren't equal, at first
 
     for (int i = 0; i < nObs; i++)
     {

@@ -16,7 +16,7 @@ using namespace dataRead;
  * @param labels        Class label for the data (as ints, ie, 0, 1, 2)
  * @param nFeatures     The number of features that compose an observation
  */
-void dataRead::readData(string fileName, float **x, int *labels, const int nFeatures)
+void dataRead::readData(string fileName, float x[][5], int *labels, const int nFeatures)
 {
     string path = "../data_generation/" + fileName;
     cout << path << endl;
@@ -71,7 +71,7 @@ void dataRead::readData(string fileName, float **x, int *labels, const int nFeat
  * @param labels        Class label for the data
  * @param nFeatures     The number of features that compose an observation
  */
-void dataRead::printSample(int sampleSize, float **x, int *labels, int nFeatures)
+void dataRead::printSample(int sampleSize, float x[][5], int *labels, int nFeatures)
 {
     cout << "Data sample: first " << sampleSize << " points" << endl;
     for (int i = 0; i < sampleSize; i++)

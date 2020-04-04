@@ -16,36 +16,13 @@ using namespace kmeans;
  * @param nObs 
  * @param nFeatures 
  */
-void kmeans::setsMean(int setid, int *sets, float **x, float *mu, const int nObs, const int nFeatures)
+void kmeans::setsMean(int setid, int *sets, float x[][5], float *mu, const int nObs, const int nFeatures, int *counts, float *sums, int rank)
 {
-    int currSet;                      // the current set in the iteration
-    int muOffset = nFeatures * setid; // offset for mu location for the given set
-    int setObs = 0;                   // a count of the number of observations in the set
-
-    for (int i = 0; i < nFeatures; i++)
-        mu[i + muOffset] = 0; // initialize mu to be 0 before updating
-
-    for (int i = 0; i < nObs; i++)
+    // this function relies on proc size >= nSets. Each proc will find a set's mean
+    for (int j = 0; j < nFeatures; j++)
     {
-        currSet = sets[i];
-        if (currSet == setid)
-        {
-            for (int j = 0; j < nFeatures; j++)
-            {
-                mu[j + muOffset] += x[i][j]; // at the observation's feature to the mean sum
-            }
-            setObs++;
-        }
-    }
-
-    // calculate the mean
-    if (setObs > 0)
-    {
-        for (int i = 0; i < nFeatures; i++)
-        {
-            mu[i + muOffset] = mu[i + muOffset] / setObs; // get the mean for this feature
-            //cout << mu[i + muOffset] << endl; // DEBUGGING
-        }
+        int idx = j + (nFeatures * rank);
+        mu[idx] = sums[idx] / counts[rank];
     }
 }
 
@@ -61,31 +38,43 @@ void kmeans::setsMean(int setid, int *sets, float **x, float *mu, const int nObs
  * @param nObs          The number of observations
  * @param nFeatures     The number of features for the observations
  */
-void kmeans::updateSets(int *sets, int nSets, float **x, float *mu, const int nObs, const int nFeatures)
+void kmeans::updateSets(int *sets, int nSets, int *counts, float *sums, float x[][5], float *mu, const int nObs, const int nFeatures, const int rank, const int npp)
 {
-    float *dists = new float[nSets]; // Collection of Euclidean distances; 3 == number of sets
-    
-    for (int i = 0; i < nObs; i++)
+
+    int startIdx = rank * npp;       // the index the rank is allowed to start counting at
+    int endIdx = (rank + 1) * npp;   // the index the rank counts up to (exclusive)
+    float dists[3]; // Collection of Euclidean distances; 3 == number of sets (nSets)
+
+    for (int i = startIdx; i < endIdx; i++)
     {
         // initialize dists to be 0 every time an centroid test is run
         for (int m = 0; m < nSets; m++)
             dists[m] = 0;
 
         int idx = 0; // dists index
-        int j = 0;
+        int j = 0;   // feautre index
         for (int k = 0; k < nFeatures * nSets; k++)
         {
             j = k % nFeatures; // add offset to j for x features
+
             dists[idx] += (x[i][j] - mu[k]) * (x[i][j] - mu[k]); // cumsum the current distance val
-            
+
             if ((k + 1) % nFeatures == 0)
-                idx ++; // update dists index based on current cluster
+                idx++; // update dists index based on current cluster
         }
         // for (int m = 0; m < nSets; m++) cout << dists[m] << " "; cout << endl; // DEBUGGING
-        sets[i] = minIdx(dists, nSets);
-    }
+        int assignment = minIdx(dists, nSets);
 
-    delete[] dists;
+        sets[i - startIdx] = assignment;
+        counts[assignment]++;
+
+        int idx2;
+        for (int j = 0; j < nFeatures; j++) // j < nfeats
+        {
+            idx2 = j + (nFeatures * assignment);
+            sums[idx2] += x[i][j];
+        }
+    }
 }
 
 /**
