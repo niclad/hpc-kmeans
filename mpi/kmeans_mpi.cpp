@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         readData(fileName, x, labels, FEATURES); // read the data from the data file
         //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
     }
-    MPI_Bcast(x, OBSERVATIONS, MPI_FLOAT, 0, MPI_COMM_WORLD); // send observations to all processes
+    MPI_Bcast(x, OBSERVATIONS * FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // send observations to all processes
     finish = CLOCK() - start;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
 
@@ -109,17 +109,46 @@ int main(int argc, char *argv[])
 
     MPI_Bcast(mu, CLUSTERS * FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // send the means to all the processes
 
+    // for (int i = 0; i < size; i++)
+    // {
+    //     if (rank == i)
+    //     {
+    //         cout << "Rank " << i << ": ";
+    //         for (int j = 0; j < 5; j++)
+    //             cout << x[25][j] << " ";
+    //         cout << endl;
+    //     }
+    // }
+
     updateSets(procSets, CLUSTERS, tempCounts, tempSums, x, mu, OBSERVATIONS, FEATURES, rank, npp); // initialize sets by updating the assigned values
     // viewSets(sets, 10, -1);                                    // DEBUGGING
 
+    // for (int i = 0; i < size; i++)
+    // {
+    //     if (rank == i)
+    //     {
+    //         cout << "Rank " << i << ": ";
+    //         for (int j = 0; j < 25; j++)
+    //             cout << procSets[j] << " ";
+    //         cout << endl;
+    //     }
+    // }
+
     // make sure all processes have the updated sets and relevant information
     MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);              // gather the set assignments
-    MPI_Reduce(tempCounts, counts, CLUSTERS, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);          // sum all counts
-    MPI_Reduce(tempSums, sums, FEATURES * CLUSTERS, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // sum all sums
+    MPI_Allreduce(tempCounts, counts, CLUSTERS, MPI_INT, MPI_SUM, MPI_COMM_WORLD);          // sum all counts
+    MPI_Allreduce(tempSums, sums, FEATURES * CLUSTERS, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD); // sum all sums
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if (rank < 3)
-        setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
+
+    // if (rank < 3)
+    // {
+    //     setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
+
+    //     for (int i = 0; i < FEATURES; i++)
+    //         cout << tempMu[i] << " ";
+    //     cout << endl;
+    // }
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
@@ -161,6 +190,23 @@ int main(int argc, char *argv[])
         MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);           // update the sets
         MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
         MPI_Bcast(mu, FEATURES * CLUSTERS, MPI_FLOAT, 0, MPI_COMM_WORLD);                    // distribute the means
+
+        // if (currIter < 2)
+        // {
+        //     for (int i = 0; i < 4; i++)
+        //     {
+        //         if (rank == i)
+        //         {
+        //             cout << rank << endl;
+        //             for (int i = 0; i < 15; i++)
+        //             {
+        //                 cout << mu[i] << " ";
+        //             }
+        //             cout << endl;
+        //             MPI_Barrier(MPI_COMM_WORLD);
+        //         }
+        //     }
+        // }
 
         if (rank == 0)
             convergence = arrayCompare(OBSERVATIONS, prevSets, sets); // check the current and previous sets for convergence

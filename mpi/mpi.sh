@@ -8,7 +8,7 @@
 #SBATCH --output=mpi_test-%j.out
 #SBATCH --time=5:00
 
-mpirun ./kmeans_mpi
+mpirun --mca btl_base_warn_component_unused 0 ./kmeans_mpi
 
 # for value in {1..10}
 # do

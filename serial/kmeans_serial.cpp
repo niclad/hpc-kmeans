@@ -9,7 +9,7 @@ using namespace dataRead;
 using namespace tools;
 using namespace kmeans;
 
-const int OBSERVATIONS = 10; // the number of data points in the file
+const int OBSERVATIONS = 100; // the number of data points in the file
 const int FEATURES = 5;      // the number of data features
 const int CLUSTERS = 3;      // the number of clusters in the data set (K)
 float **x;                   // data points

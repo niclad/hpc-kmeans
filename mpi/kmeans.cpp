@@ -41,9 +41,9 @@ void kmeans::setsMean(int setid, int *sets, float x[][5], float *mu, const int n
 void kmeans::updateSets(int *sets, int nSets, int *counts, float *sums, float x[][5], float *mu, const int nObs, const int nFeatures, const int rank, const int npp)
 {
 
-    int startIdx = rank * npp;       // the index the rank is allowed to start counting at
-    int endIdx = (rank + 1) * npp;   // the index the rank counts up to (exclusive)
-    float dists[3]; // Collection of Euclidean distances; 3 == number of sets (nSets)
+    int startIdx = rank * npp;     // the index the rank is allowed to start counting at
+    int endIdx = (rank + 1) * npp; // the index the rank counts up to (exclusive)
+    float dists[3];                // Collection of Euclidean distances; 3 == number of sets (nSets)
 
     for (int i = startIdx; i < endIdx; i++)
     {
@@ -62,7 +62,7 @@ void kmeans::updateSets(int *sets, int nSets, int *counts, float *sums, float x[
             if ((k + 1) % nFeatures == 0)
                 idx++; // update dists index based on current cluster
         }
-        // for (int m = 0; m < nSets; m++) cout << dists[m] << " "; cout << endl; // DEBUGGING
+
         int assignment = minIdx(dists, nSets);
 
         sets[i - startIdx] = assignment;
