@@ -43,7 +43,7 @@ void dataRead::readData(string fileName, float *x, const int nFeatures)
             while (getline(s, value, delim))
             {
                 if ((dataItem != 0) && (dataItem % nFeatures == 0))
-                    continue;
+                    break;
                 
                 x[dataItem] = stof(value);
                 dataItem++;
