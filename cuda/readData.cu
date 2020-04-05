@@ -48,7 +48,7 @@ void dataRead::readData(string fileName, float *x, const int nFeatures)
                 x[dataItem] = stof(value);
                 dataItem++;
                 i++;
-                cout << dataItem << endl;
+                // cout << dataItem << endl;
             }
 
             if (dataFile.eof())
