@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
         if (rank <= 3)
             setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);           // update the sets
         MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
         MPI_Bcast(mu, FEATURES * CLUSTERS, MPI_FLOAT, 0, MPI_COMM_WORLD);                    // distribute the means
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
         if (rank == 0)
             convergence = arrayCompare(OBSERVATIONS, prevSets, sets); // check the current and previous sets for convergence
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         MPI_Bcast(&convergence, 1, MPI_CHAR, 0, MPI_COMM_WORLD);
         currIter++;
     }
