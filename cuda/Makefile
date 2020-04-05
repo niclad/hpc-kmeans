@@ -8,13 +8,13 @@ test: $(objects)
 	$(CC) $(CVER) $(CFLAGS) -o $(TEST_TARGET) $(objects)
 
 readData.o: readData.cpp readData.h
-	$(CC) $(CVER) $(CFLAGS) -c readData.cpp
+	$(CC) $(CVER) $(CFLAGS) -c readData.cu
 
 tools.o: tools.cpp tools.h
-	$(CC) $(CVER) $(CFLAGS) -c tools.cpp
+	$(CC) $(CVER) $(CFLAGS) -c tools.cu
 
-$(TEST_TARGET).o: $(TEST_TARGET).cpp
-	$(CC) $(CVER) $(CFLAGS) -c $(TEST_TARGET).cpp
+$(TEST_TARGET).o: $(TEST_TARGET).cu
+	$(CC) $(CVER) $(CFLAGS) -c $(TEST_TARGET).cu
 
 
 clean:

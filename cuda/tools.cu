@@ -84,9 +84,9 @@ bool tools::inArray(int *arr, int item, int n)
  * @param prevSets      The previous set assignments
  * @param sets          The current set assignments
  */
-char tools::arrayCompare(const int nObs, int *h_converge)
+bool tools::arrayCompare(const int nObs, int *h_converge)
 {
-    char equal = 1; // assume the arrays aren't equal, at first
+    bool equal = true; // assume the arrays aren't equal, at first
 
     for (int i = 0; i < nObs; i++)
     {

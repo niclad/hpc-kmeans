@@ -1,4 +1,5 @@
 #include <cuda.h>
+#include <cmath>
 #include <iostream>
 #include "readData.h"
 #include <string>
@@ -53,7 +54,7 @@ __global__ void updateSets(float *d_x, float *d_mu, float *d_sums, int *d_counts
     float currMu[5];
     int startIdx = t_id * nFeatures;
 
-    for (int i = 0; i < nFeautres; i++)
+    for (int i = 0; i < nFeatures; i++)
     {
         currObs[i] = d_x[t_id + i];
     }
@@ -62,7 +63,7 @@ __global__ void updateSets(float *d_x, float *d_mu, float *d_sums, int *d_counts
     int bestSet = 0;
     for (int aSet = 0; aSet < nSets; aSet++)
     {
-        for (int i = 0; i < nFeautres; i++)
+        for (int i = 0; i < nFeatures; i++)
         {
             currMu[i] = d_mu[(aSet * nFeatures) + i];
         }
@@ -106,7 +107,7 @@ __global__ void copySets(int *d_sets, int *d_prevSets, int nObs)
     d_prevSets[t_id] = d_sets[t_id];
 }
 
-__global__ void checkConvergence(int *d_sets, int *d_prevSets, char *d_converge, int nObs)
+__global__ void checkConvergence(int *d_sets, int *d_prevSets, bool *d_converge, int nObs)
 {
     int t_id = blockIdx.x * blockDim.x + threadIdx.x; // get global thread id
 
@@ -119,7 +120,7 @@ int main()
 {
     // control variables
     double start, finish, total = 0; // timing values
-    char convergence = 0;            // state of set convergence
+    bool convergence = false;            // state of set convergence
     int currIter = 0;                // the current iteration for update loop
     double timingStats[6];
 
@@ -128,7 +129,7 @@ int main()
     int *h_sets, *h_prevSets, *h_counts;
     float *d_x, *d_mu, *d_sums; // device data
     int *d_sets, *d_prevSets, *d_counts;
-    char *d_converge, *h_converge; // convergence check
+    bool *d_converge, *h_converge; // convergence check
 
     // size variables
     size_t obsBytes, muBytes, setsBytes, cntBytes, convBytes;
@@ -182,7 +183,7 @@ int main()
 
     // ===== INITIALIZE K-MEANS =====
     start = CLOCK();
-    forgy(CLUSTERS, FEATURES, mu, x, OBSERVATIONS); // initialize means on host
+    forgy(CLUSTERS, FEATURES, h_mu, h_x, OBSERVATIONS); // initialize means on host
 
     for (int i = 0; i < 10; i++)
     {
@@ -195,7 +196,7 @@ int main()
     blockSize = 1024;
     gridSize = (int)ceil((float)OBSERVATIONS / blockSize);
 
-    updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sum, d_counts, d_sets, CLUSTERS, FEATURES, OBSERVATIONS); // initialize sets by updating the assigned values
+    updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sums, d_counts, d_sets, CLUSTERS, FEATURES, OBSERVATIONS); // initialize sets by updating the assigned values
 
     computeMu<<<1, CLUSTERS>>>(d_mu, d_sums, d_counts, FEATURES); // update means based on new sets;
 
@@ -217,7 +218,7 @@ int main()
         // viewSets(sets, 10, currIter);      // DEBUGGING
 
         checkConvergence<<<gridSize, blockSize>>>(d_sets, d_prevSets, d_converge, OBSERVATIONS);
-        cudaMemcpy(h_converge, d_converge, convbytes, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_converge, d_converge, convBytes, cudaMemcpyDeviceToHost);
 
         convergence = arrayCompare(OBSERVATIONS, h_converge); // check the current and previous sets for convergence
         currIter++;
@@ -237,7 +238,7 @@ int main()
 
     // ===== SAVE FINAL LABELS =====
     start = CLOCK();
-    saveData("out_data.csv", sets, OBSERVATIONS); // save the updated labels
+    saveData("out_data.csv", h_sets, OBSERVATIONS); // save the updated labels
     finish = CLOCK() - start;
     total += finish;
     cout << "File save time: " << finish << " msec." << endl;
