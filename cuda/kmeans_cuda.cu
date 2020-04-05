@@ -169,6 +169,11 @@ int main()
     for (int i = 0; i < CLUSTERS; i++)
         h_counts[i] = 0;
 
+    // get device properties
+    cudaDeviceProp props;               // devices properties
+    cudaGetDeviceProperties(&props, 0); // get the device properties
+    cout << "GPU: " << props.name << ": " << props.major << "." << props.minor << endl;
+
     // ===== READ DATA =====
     start = CLOCK();
     readData(fileName, h_x, FEATURES); // read the data from the data file
