@@ -84,14 +84,14 @@ int main(int argc, char *argv[])
 
     // ===== READ DATA =====
     MPI_Barrier(MPI_COMM_WORLD);
-    start = CLOCK();
+    start = MPI_Wtime();
     if (rank == 0) // only let head proc. read data.
     {
         readData(fileName, x, labels, FEATURES); // read the data from the data file
         //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
     }
     MPI_Bcast(x, OBSERVATIONS * FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // send observations to all processes
-    finish = CLOCK() - start;
+    finish = MPI_Wtime() - start;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
 
     if (rank == 0)
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     }
     // ===== INITIALIZE K-MEANS =====
     MPI_Barrier(MPI_COMM_WORLD);
-    start = CLOCK();
+    start = MPI_Wtime();
     if (rank == 0)                                      // only let one process handle this
         forgy(CLUSTERS, FEATURES, mu, x, OBSERVATIONS); // initialize means using Forgy method
     // viewMeans(mu, FEATURES, CLUSTERS, -1);          // DEBUGGING
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
     MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
     MPI_Bcast(mu, FEATURES * CLUSTERS, MPI_FLOAT, 0, MPI_COMM_WORLD);                    // distribute the means
 
-    finish = CLOCK() - start;
+    finish = MPI_Wtime() - start;
     cout << "RANK " << rank << ": " << finish << " msec." << endl;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
 
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 
     // ===== OPERATE ON SETS =====
     MPI_Barrier(MPI_COMM_WORLD);
-    start = CLOCK();
+    start = MPI_Wtime();
     MPI_Scatter(sets, npp, MPI_INT, procSets, npp, MPI_INT, 0, MPI_COMM_WORLD);
     currIter = 0;
     while (!convergence && (currIter < MAX_ITER))
@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
     }
     MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);
 
-    finish = CLOCK() - start;
+    finish = MPI_Wtime() - start;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
     //MPI_Reduce(&currIter, &currIter, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);   // get the most number of iterations
 
