@@ -5,7 +5,7 @@ namespace tools
 {
 void forgy(int nSets, int nFeatures, float *mu, float *x, int nObs);
 bool inArray(int *arr, int item, int n);
-bool arrayCompare(const int nObs, int *h_converge);
+bool arrayCompare(const int nObs, bool *h_converge);
 void arrayCopy(const int nObs, int *prevSets, int *sets);
 double CLOCK();
 } // namespace tools

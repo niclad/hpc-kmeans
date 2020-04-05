@@ -107,13 +107,14 @@ __global__ void copySets(int *d_sets, int *d_prevSets, int nObs)
     d_prevSets[t_id] = d_sets[t_id];
 }
 
-__global__ void checkConvergence(int *d_sets, int *d_prevSets, bool d_converge[OBSERVATIONS], int nObs)
+__global__ void checkConvergence(int *d_sets, int *d_prevSets, bool *d_converge, int nObs)
 {
     int t_id = blockIdx.x * blockDim.x + threadIdx.x; // get global thread id
 
     if (t_id > nObs)
         return;
-    d_converge = d_sets[t_id] == d_prevSets[t_id];
+
+    d_converge[t_id] = d_sets[t_id] == d_prevSets[t_id];
 }
 
 int main()
