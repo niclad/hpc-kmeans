@@ -1,7 +1,7 @@
 TEST_TARGET = kmeans_cuda
 CC = nvcc
 CVER = -std=c++11
-CFLAGS = -Wall -g -O1
+CFLAGS = -g -O1
 objects = $(TEST_TARGET).o readData.o tools.o
 
 test: $(objects)

@@ -1,5 +1,5 @@
 #include <cuda.h>
-#include <cmath>
+#include <cfloat>
 #include <iostream>
 #include "readData.h"
 #include <string>
@@ -107,7 +107,7 @@ __global__ void copySets(int *d_sets, int *d_prevSets, int nObs)
     d_prevSets[t_id] = d_sets[t_id];
 }
 
-__global__ void checkConvergence(int *d_sets, int *d_prevSets, bool *d_converge, int nObs)
+__global__ void checkConvergence(int *d_sets, int *d_prevSets, bool d_converge[OBSERVATIONS], int nObs)
 {
     int t_id = blockIdx.x * blockDim.x + threadIdx.x; // get global thread id
 
@@ -145,7 +145,7 @@ int main()
     h_sets = new int[OBSERVATIONS];
     h_prevSets = new int[OBSERVATIONS];
     h_counts = new int[CLUSTERS];
-    h_converge = new char[OBSERVATIONS];
+    h_converge = new bool[OBSERVATIONS];
 
     cudaMalloc(&d_x, obsBytes); // allocate memory on device
     cudaMalloc(&d_mu, muBytes);
@@ -210,17 +210,17 @@ int main()
     while (!convergence && (currIter < MAX_ITER))
     {
         copySets<<<gridSize, blockSize>>>(d_sets, d_prevSets, OBSERVATIONS);                                       // update prevSets, to keep last sets
-        updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sum, d_counts, d_sets, CLUSTERS, FEATURES, OBSERVATIONS); // update the sets with the new means
+        updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sums, d_counts, d_sets, CLUSTERS, FEATURES, OBSERVATIONS); // update the sets with the new means
 
         computeMu<<<1, CLUSTERS>>>(d_mu, d_sums, d_counts, FEATURES);
 
         // viewMeans(mu, FEATURES, CLUSTERS, currIter); // DEBUGGING
         // viewSets(sets, 10, currIter);      // DEBUGGING
 
-        checkConvergence<<<gridSize, blockSize>>>(d_sets, d_prevSets, d_converge, OBSERVATIONS);
+        checkConvergence<<<gridSize, blockSize>>>(d_sets, d_prevSets, d_converge, OBSERVATIONS); // check the current and previous sets for convergence
         cudaMemcpy(h_converge, d_converge, convBytes, cudaMemcpyDeviceToHost);
 
-        convergence = arrayCompare(OBSERVATIONS, h_converge); // check the current and previous sets for convergence
+        convergence = arrayCompare(OBSERVATIONS, h_converge); // check if everything is equal
         currIter++;
     }
     cudaMemcpy(h_sets, d_sets, setsBytes, cudaMemcpyDeviceToHost);
