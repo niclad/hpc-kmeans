@@ -11,8 +11,9 @@
 for value in {1..10}
 do
 	echo "RUN: " $value
-	mpirun --mca btl_base_warn_component_unused 0 ./kmeans_mpi
+	time mpirun --mca btl_base_warn_component_unused 0 ./kmeans_mpi
 	echo "*****************************"
+	sleep 1
 done
 
 echo "END RUN"
