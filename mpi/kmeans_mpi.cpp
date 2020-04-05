@@ -10,7 +10,7 @@ using namespace dataRead;
 using namespace tools;
 using namespace kmeans;
 
-const int OBSERVATIONS = 100;     // the number of data points in the file
+const int OBSERVATIONS = 10000;     // the number of data points in the file
 const int FEATURES = 5;           // the number of data features
 const int CLUSTERS = 3;           // the number of clusters in the data set (K)
 float x[OBSERVATIONS][FEATURES];  // data points -- MUST BE CONTIGUOUS DATA
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         //printSample(5, x, labels, FEATURES); // print first 5 oberservations and labels read from input file - DEBUGGING
     }
     MPI_Bcast(x, OBSERVATIONS * FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // send observations to all processes
-    finish = MPI_Wtime() - start;
+    finish = (MPI_Wtime() - start) / 1000;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
 
     if (rank == 0)
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
     MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means
     MPI_Bcast(mu, FEATURES * CLUSTERS, MPI_FLOAT, 0, MPI_COMM_WORLD);                    // distribute the means
 
-    finish = MPI_Wtime() - start;
+    finish = (MPI_Wtime() - start) / 1000;
     cout << "RANK " << rank << ": " << finish << " msec." << endl;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
 
@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
     }
     MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);
 
-    finish = MPI_Wtime() - start;
+    finish = (MPI_Wtime() - start) / 1000;
     MPI_Reduce(&finish, &maxFinish, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); // get longest running time
     //MPI_Reduce(&currIter, &currIter, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);   // get the most number of iterations
 
