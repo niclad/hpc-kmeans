@@ -42,11 +42,12 @@ void dataRead::readData(string fileName, float *x, const int nFeatures)
             int i = 0;
             while (getline(s, value, delim))
             {
-                if ((dataItem != 0) && (dataItem % nFeatures == 0))
-                    break;
+                if (i >= nFeatures)
+                    continue;
                 
                 x[dataItem] = stof(value);
                 dataItem++;
+                i++;
                 cout << dataItem << endl;
             }
 
