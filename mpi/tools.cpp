@@ -61,7 +61,7 @@ void tools::forgy(int nSets, int nFeatures, float *mu, float x[][5], int nObs)
         obsChoice[i] = -1;
 
     random_device seed;
-    mt19937 rng(seed());
+    mt19937 rng(12345);
     uniform_int_distribution<mt19937::result_type> dist(0, nObs - 1);
 
     for (int i = 0; i < nSets; i++)
