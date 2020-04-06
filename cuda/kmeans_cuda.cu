@@ -1,5 +1,6 @@
-#include <cuda.h>
 #include <cfloat>
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include <iostream>
 #include "readData.h"
 #include <string>

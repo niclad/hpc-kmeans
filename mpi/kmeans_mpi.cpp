@@ -141,14 +141,14 @@ int main(int argc, char *argv[])
 
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    // if (rank < 3)
-    // {
-    //     setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
+    if (rank < 3)
+    {
+        setsMean(rank, sets, x, tempMu, OBSERVATIONS, FEATURES, counts, sums, rank);
 
-    //     for (int i = 0; i < FEATURES; i++)
-    //         cout << tempMu[i] << " ";
-    //     cout << endl;
-    // }
+        // for (int i = 0; i < FEATURES; i++)
+        //     cout << tempMu[i] << " ";
+        // cout << endl;
+    }
 
     //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Gather(tempMu, FEATURES, MPI_FLOAT, mu, FEATURES, MPI_FLOAT, 0, MPI_COMM_WORLD); // get all the means

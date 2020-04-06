@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+
 __global__ void vecAdd(double *a, double *b, double *c, int n) // CUDA kernel
 {
     int id = blockIdx.x * blockDim.x + threadIdx.x; // Get global thread ID
