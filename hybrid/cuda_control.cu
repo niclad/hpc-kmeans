@@ -1,9 +1,9 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cfloat>
-#include <iostream>
-
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
+#include <cmath>
 
 /**
  * @brief Print the device's properties
@@ -13,10 +13,28 @@ extern void dispDevice()
 {
     cudaDeviceProp props;
     cudaGetDeviceProperties(&props, 0);
-    cout << "GPU: " << props.name << ": " << props.major << "." << props.minor << endl;
+    printf("GPU: %s\n", props.name);
 }
 
-__device__ float 
+__global__ void test()
+{
+    int t_id = blockIdx.x * blockDim.x + threadIdx.x; // get global thread ID
+
+    if (t_id >= 1)
+        return;
+
+    printf("t_id %d working?\n", t_id);
+}
+
+extern void testWrapper()
+{
+    int blockSize, gridSize;
+    blockSize = 1024;
+    gridSize = (int)ceil((float)1000 / blockSize);
+    test<<<gridSize, blockSize>>>();
+}
+
+__device__ float
 dist(float *currObs, float *currMu, int nFeatures)
 {
     float distance = 0;
@@ -26,24 +44,40 @@ dist(float *currObs, float *currMu, int nFeatures)
     return distance;
 }
 
-__global__ void updateSets(float *x, float *mu, float *sums, int *counts, int *sets, int nSets, int nFeatures, int nObs)
+__global__ void updateSets(float *d_x, float *d_mu, float *d_sums, int *d_counts, int *d_sets, int nSets, int nFeatures, int nObs, int rank)
 {
-    int t_id = blockIdx.x * blockDim.x + threadIdx.x; // get global thread ID
+    int t_id = blockIdx.x * blockDim.x + threadIdx.x; // global thread id
     if (t_id >= nObs)
         return;
 
     float currObs[5];
     float currMu[5];
+    int startIdx = (rank * nObs * nFeatures) + (t_id * nFeatures);
 
     for (int i = 0; i < nFeatures; i++)
-        currObs[i] = x[t_id + i];
+    {
+        currObs[i] = d_x[startIdx + i];
+    }
 
-    float bestDist = FLT_MAX; // maximum representable float
+    // if (t_id == 0)
+    // {
+    //     printf("npp %d startIdx %d\n", nObs, startIdx);
+    //     printf("displaying t_id 0 pt on rank %d.\n", rank);
+    //     for (int i = 0; i < 5; i++)
+    //     {
+    //         printf("%f ", currObs[i]);
+    //     }
+    //     printf("\n");
+    // }
+
+    float bestDist = FLT_MAX; // maximum float
     int bestSet = 0;
-    for (int aSet = 0; 0 < nSets; aSet++)
+    for (int aSet = 0; aSet < nSets; aSet++)
     {
         for (int i = 0; i < nFeatures; i++)
-            currMu[i] = mu[(aSet * nFeatures) + i];
+        {
+            currMu[i] = d_mu[(aSet * nFeatures) + i];
+        }
 
         float distance = dist(currObs, currMu, nFeatures);
         if (distance < bestDist)
@@ -52,33 +86,31 @@ __global__ void updateSets(float *x, float *mu, float *sums, int *counts, int *s
             bestSet = aSet;
         }
     }
-    sets[t_id] = bestSet;
-    atomicAdd(&counts[bestSet], 1);
+    d_sets[t_id] = bestSet;
+    atomicAdd(&d_counts[bestSet], 1);
 
     for (int i = 0; i < nFeatures; i++)
-        atomicAdd(&sums[(bestSet * nFeatures) + i], currObs[i]);
+    {
+        atomicAdd(&d_sums[(bestSet * nFeatures) + i], currObs[i]);
+    }
 }
 
-extern void updateSetsWrapper(float *x, float *mu, float *sums, int *counts, int *sets, int nSets, int nFeatures, int nObs)
+extern void updateSetsWrapper(float *x, float *mu, float *sums, int *counts, int *sets, int nSets, int nFeatures, int nObs, int rank)
 {
     float *d_x, *d_mu, *d_sums;
-    int *d_sets, *d_prevSets, *d_counts;
-    bool *d_converge;
+    int *d_sets, *d_counts;
 
-    size_t obsBytes, muBytes, setsBytes, cntBytes, convBytes;
-    obsBytes = sizeof(float) * nObs * nFeatures; // get the sizes in bytes of device arrays
+    size_t obsBytes, muBytes, setsBytes, cntBytes;
+    obsBytes = sizeof(float) * nObs * nFeatures * 4; // get the sizes in bytes of device arrays
     muBytes = sizeof(float) * nFeatures * nSets;
     setsBytes = sizeof(int) * nObs;
     cntBytes = sizeof(int) * nSets;
-    convBytes = sizeof(char) * nObs;
 
     cudaMalloc(&d_x, obsBytes); // allocate memory on device
     cudaMalloc(&d_mu, muBytes);
     cudaMalloc(&d_sums, muBytes);
     cudaMalloc(&d_sets, setsBytes);
-    cudaMalloc(&d_prevSets, setsBytes);
     cudaMalloc(&d_counts, cntBytes);
-    cudaMalloc(&d_converge, convBytes);
 
     cudaMemcpy(d_x, x, obsBytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_sums, sums, muBytes, cudaMemcpyHostToDevice);
@@ -89,20 +121,20 @@ extern void updateSetsWrapper(float *x, float *mu, float *sums, int *counts, int
     blockSize = 1024;
     gridSize = (int)ceil((float)nObs / blockSize);
 
-    updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sums, d_counts, d_sets, nSets, nFeatures, nObs);
+    updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sums, d_counts, d_sets, nSets, nFeatures, nObs, rank);
 
-    cudaMemcpy(x, d_x, obsBytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(sums, d_sums, muBytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(counts, d_counts, cntBytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(mu, d_mu, muBytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(sets, d_sets, setsBytes, cudaMemcpyDeviceToHost);
+
+    //printf("counts[0]=%d\n", counts[0]);
 
     cudaFree(d_x);
     cudaFree(d_mu);
     cudaFree(d_sums);
     cudaFree(d_sets);
-    cudaFree(d_prevSets);
     cudaFree(d_counts);
-    cudaFree(d_converge);
 }
 
 __global__ void computeMu(float *mu, float *sums, int *counts, int nFeatures)
@@ -110,9 +142,9 @@ __global__ void computeMu(float *mu, float *sums, int *counts, int nFeatures)
     int set = threadIdx.x;
     int offset = set * nFeatures;
     int i_counts = 1;
-    if(counts[set] != 0)
+    if (counts[set] != 0)
         i_counts = counts[set];
-    for(int i = 0; i < nFeatures; i++)
+    for (int i = 0; i < nFeatures; i++)
         mu[offset + i] = sums[offset + i] / i_counts;
 }
 
@@ -148,14 +180,14 @@ __global__ void copySets(int *sets, int *prevSets, int nObs)
 
     if (t_id >= nObs)
         return;
-    
+
     prevSets[t_id] = sets[t_id];
 }
 
 extern void copyWrapper(int *sets, int *prevSets, int nObs)
 {
     int *d_sets, *d_prevSets;
-    size_t setsBytes= sizeof(int) * nObs;
+    size_t setsBytes = sizeof(int) * nObs;
 
     cudaMalloc(&d_sets, setsBytes);
     cudaMalloc(&d_prevSets, setsBytes);
@@ -181,8 +213,10 @@ __global__ void checkConvergence(int *sets, int *prevSets, bool *converge, int n
 
     if (t_id >= nObs)
         return;
-    
+
+    // printf("%d, %d\n", sets[t_id], prevSets[t_id]);
     converge[t_id] = sets[t_id] == prevSets[t_id];
+    //printf("%d, %d\n",t_id, converge[t_id]);
 }
 
 extern void convergeWrapper(int *sets, int *prevSets, bool *converge, int nObs)
@@ -206,7 +240,7 @@ extern void convergeWrapper(int *sets, int *prevSets, bool *converge, int nObs)
 
     checkConvergence<<<gridSize, blockSize>>>(d_sets, d_prevSets, d_converge, nObs);
 
-    cudaMemcpy(converge, d_converge, setsBytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(converge, d_converge, convBytes, cudaMemcpyDeviceToHost);
 
     cudaFree(d_sets);
     cudaFree(d_prevSets);

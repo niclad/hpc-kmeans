@@ -51,13 +51,15 @@ __global__ void updateSets(float *d_x, float *d_mu, float *d_sums, int *d_counts
     if (t_id >= nObs)
         return;
 
+
+
     float currObs[5];
     float currMu[5];
     int startIdx = t_id * nFeatures;
 
     for (int i = 0; i < nFeatures; i++)
     {
-        currObs[i] = d_x[t_id + i];
+        currObs[i] = d_x[startIdx + i];
     }
 
     float bestDist = FLT_MAX; // maximum float
@@ -112,7 +114,7 @@ __global__ void checkConvergence(int *d_sets, int *d_prevSets, bool *d_converge,
 {
     int t_id = blockIdx.x * blockDim.x + threadIdx.x; // get global thread id
 
-    if (t_id > nObs)
+    if (t_id >= nObs)
         return;
 
     d_converge[t_id] = d_sets[t_id] == d_prevSets[t_id];
@@ -204,7 +206,7 @@ int main()
     gridSize = (int)ceil((float)OBSERVATIONS / blockSize);
 
     updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sums, d_counts, d_sets, CLUSTERS, FEATURES, OBSERVATIONS); // initialize sets by updating the assigned values
-
+    cudaDeviceSynchronize();
     computeMu<<<1, CLUSTERS>>>(d_mu, d_sums, d_counts, FEATURES); // update means based on new sets;
 
     finish = CLOCK() - start;
@@ -216,8 +218,15 @@ int main()
     start = CLOCK();
     while (!convergence && (currIter < MAX_ITER))
     {
-        copySets<<<gridSize, blockSize>>>(d_sets, d_prevSets, OBSERVATIONS);                                       // update prevSets, to keep last sets
+        // reset the counts and sums to 0
+        cudaMemset(d_counts, 0, CLUSTERS * sizeof(int));
+        cudaMemset(d_sums, 0, FEATURES * CLUSTERS * sizeof(int));
+
+        copySets<<<gridSize, blockSize>>>(d_sets, d_prevSets, OBSERVATIONS);  // update prevSets, to keep last sets
+        cudaDeviceSynchronize();
         updateSets<<<gridSize, blockSize>>>(d_x, d_mu, d_sums, d_counts, d_sets, CLUSTERS, FEATURES, OBSERVATIONS); // update the sets with the new means
+
+        cudaDeviceSynchronize();
 
         computeMu<<<1, CLUSTERS>>>(d_mu, d_sums, d_counts, FEATURES);
 
