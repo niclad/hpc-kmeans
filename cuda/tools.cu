@@ -38,8 +38,6 @@ void tools::forgy(int nSets, int nFeatures, float *mu, float *x, int nObs)
         //cout << val << endl;
     }
 
-    // hmmm...
-
     for (int i = 0; i < nSets; i++) // assign the starting means
     {
         for (int j = 0; j < nFeatures; j++)
@@ -98,6 +96,13 @@ bool tools::arrayCompare(const int nObs, bool *h_converge)
     return equal;
 }
 
+/**
+ * @brief Copy an array
+ * 
+ * @param nObs      Number of elements to be copied
+ * @param prevSets  The result of the copy
+ * @param sets      The array to copy
+ */
 void tools::arrayCopy(const int nObs, int *prevSets, int *sets)
 {
     for (int i = 0; i < nObs; i++)

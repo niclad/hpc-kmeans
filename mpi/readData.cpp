@@ -108,6 +108,13 @@ void dataRead::saveData(const string saveName, int *sets, int nObs)
     outputData.close();
 }
 
+
+/**
+ * @brief Save the timing stats
+ * 
+ * @param timeStats 
+ * @param fileName 
+ */
 void dataRead::saveStats(double timeStats[6], string fileName)
 {
     typedef numeric_limits<double> dbl;

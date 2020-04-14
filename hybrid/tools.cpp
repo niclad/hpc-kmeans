@@ -109,6 +109,15 @@ void tools::forgy(int nSets, int nFeatures, float *mu, float *x, int nObs)
     delete[] obsChoice; // free host memory
 }
 
+/**
+ * @brief Check for an item in an array
+ * 
+ * @param arr   The array to check
+ * @param item  The item to look for
+ * @param n     The number of items to search
+ * @return true 
+ * @return false 
+ */
 bool tools::inArray(int *arr, int item, int n)
 {
     bool inArr = true; // assume the element is in the array
@@ -123,6 +132,14 @@ bool tools::inArray(int *arr, int item, int n)
     return inArr;
 }
 
+/**
+ * @brief Check for array equivalence
+ * 
+ * @param nObs          The number of elements to compare
+ * @param h_converge    Are these two elements equal?
+ * @return true 
+ * @return false 
+ */
 bool tools::arrayCompare(const int nObs, bool *h_converge)
 {
     bool equal = true; // assume the arrays aren't equal, at first
@@ -166,6 +183,12 @@ void tools::saveData(const string saveName, int *sets, int nObs)
     outputData.close();
 }
 
+/**
+ * @brief Save timing stats
+ * 
+ * @param timeStats 
+ * @param fileName 
+ */
 void tools::saveStats(double timeStats[6], string fileName)
 {
     typedef numeric_limits<double> dbl;

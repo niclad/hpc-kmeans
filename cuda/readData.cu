@@ -40,7 +40,7 @@ void dataRead::readData(string fileName, float *x, const int nFeatures)
             // cout << line << endl;
             stringstream s(line); // convert the line to a string stream
             int i = 0;
-            while (getline(s, value, delim))
+            while (getline(s, value, delim)) // read the parts of a line
             {
                 if (i >= nFeatures)
                     continue;
@@ -55,7 +55,7 @@ void dataRead::readData(string fileName, float *x, const int nFeatures)
                 break;
         }
         
-        cout << "Data points read: " << dataItem / nFeatures << endl;
+        cout << "Data points read: " << dataItem / nFeatures << endl; // display the number of data points read
     }
 
     dataFile.close(); // close the file
@@ -106,6 +106,13 @@ void dataRead::saveData(const string saveName, int *sets, int nObs)
     outputData.close();
 }
 
+
+/**
+ * @brief Save the timing stats generated
+ * 
+ * @param timeStats The timing stats obtained from the run
+ * @param fileName  The name of the file to save the stats as
+ */
 void dataRead::saveStats(double timeStats[6], string fileName)
 {
     typedef numeric_limits<double> dbl;

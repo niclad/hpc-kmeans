@@ -136,6 +136,13 @@ bool tools::arrayCompare(const int nObs, int *prevSets, int *sets)
     return equal;
 }
 
+/**
+ * @brief Copy an array
+ * 
+ * @param nObs 
+ * @param prevSets 
+ * @param sets 
+ */
 void tools::arrayCopy(const int nObs, int *prevSets, int *sets)
 {
     for (int i = 0; i < nObs; i++)

@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
     updateSetsWrapper(x, mu, tempSums, tempCounts, procSets, CLUSTERS, FEATURES, npp, rank); // initialize sets based on initial means
     uswE = CLOCK() - uswS;
 
+    // gather data on processes
     MPI_Gather(procSets, npp, MPI_INT, sets, npp, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Allreduce(tempCounts, counts, CLUSTERS, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(tempSums, sums, FEATURES * CLUSTERS, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);

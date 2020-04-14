@@ -194,13 +194,14 @@ int main()
     start = CLOCK();
     forgy(CLUSTERS, FEATURES, h_mu, h_x, OBSERVATIONS); // initialize means on host
 
-    for (int i = 0; i < 10; i++)
-    {
-        cout << h_x[i] << endl;
-    }
+    // for (int i = 0; i < 10; i++) // DEBUGGING
+    // {
+    //     cout << h_x[i] << endl;
+    // }
 
     cudaMemcpy(d_mu, h_mu, muBytes, cudaMemcpyHostToDevice); // copy means to device
 
+    // establish number of CUDA threads
     int blockSize, gridSize;
     blockSize = 1024;
     gridSize = (int)ceil((float)OBSERVATIONS / blockSize);
@@ -228,7 +229,7 @@ int main()
 
         cudaDeviceSynchronize();
 
-        computeMu<<<1, CLUSTERS>>>(d_mu, d_sums, d_counts, FEATURES);
+        computeMu<<<1, CLUSTERS>>>(d_mu, d_sums, d_counts, FEATURES); // update the mean for the new set assignments
 
         // viewMeans(mu, FEATURES, CLUSTERS, currIter); // DEBUGGING
         // viewSets(sets, 10, currIter);      // DEBUGGING
@@ -239,7 +240,7 @@ int main()
         convergence = arrayCompare(OBSERVATIONS, h_converge); // check if everything is equal
         currIter++;
     }
-    cudaMemcpy(h_sets, d_sets, setsBytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_sets, d_sets, setsBytes, cudaMemcpyDeviceToHost); // cp[y the final set assignments back to the device
 
     finish = CLOCK() - start;
     total += finish;
