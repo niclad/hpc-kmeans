@@ -56,6 +56,6 @@ The number of observations to cluster is coded in the C files. To change the
 amount of observations clusters, change the variable `OBSERVATIONS` to either
 one of 100, 1000, 10000, 100000, and 1000000. The code will have to be recompiled.
 
-## Important Note
+## ___Important Note___
 
 This repository has never been maintained since this research has concluded. As such, there's a lot of bugs with the code that I no longer have the time to find or fix. If you run any of this code under `valgrind`, you're very likely to make Valgrind, myself, and yourself cry. Otherwise, you're more than welcome to use this code for your own work... but you've been warned.
